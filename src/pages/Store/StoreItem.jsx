@@ -78,18 +78,15 @@ export default function StoreItem() {
     });
 
   const preparePrintData = (product) => {
-    console.log(product);
-
     const priceVal = product.product_id?.sell_price ?? 0;
     const priceCurrency =
-      product.product_id?.sell_currency === "usd" ? "$" : "so'm";
+      product.product_id?.currency === "usd" ? "$" : "so'm";
 
     return {
       name: product.product_id?.product_name ?? "Noma'lum",
       model: product.product_id?.model ?? "",
       price: `${priceVal.toFixed(0)}${priceCurrency}`,
       barcode: product.product_id?.barcode ?? "0000000000000",
-      special_notes: product.product_id?.special_notes ?? "-",
     };
   };
 
@@ -119,8 +116,8 @@ export default function StoreItem() {
               item.quantity === 0
                 ? "red"
                 : item.quantity <= 5
-                ? "yellow"
-                : "inherit",
+                  ? "yellow"
+                  : "inherit",
             display: "inline-block",
             padding: "15px",
             borderRadius: "3px",
@@ -249,7 +246,6 @@ export default function StoreItem() {
       }
     );
   };
-  console.log(printData);
 
   return (
     <div>
@@ -268,41 +264,21 @@ export default function StoreItem() {
               }}
             >
               <div
-                className="llllllll"
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  textAlign: "center",
                 }}
               >
-                {/* <p
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    fontSize: "22px",
-                    fontWeight: "900",
-                  }}
-                >
-                  Iproservice
-                </p> */}
-                <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                  <div style={{ fontSize: "18px", fontWeight: "bold" }}>
-                    {printData.name}
-                  </div>
-                  <div style={{ fontSize: "22px", fontWeight: "bold" }}>
-                    {printData.model}
-                  </div>
+                <div style={{ fontSize: "18px", fontWeight: "bold" }}>
+                  {printData.name}
                 </div>
-                <span> {printData.barcode}</span>
-                <div
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: "900",
-                    transform: "translateY(5px)",
-                  }}
-                >
-                  <p>{printData.special_notes}</p>
+                <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                  {printData.model}
+                </div>
+                <div style={{ fontSize: "20px", fontWeight: "900" }}>
+                  {printData.price}
                 </div>
               </div>
               <QRCodeSVG
@@ -345,11 +321,10 @@ export default function StoreItem() {
               border: "1px solid #ccc",
             }}
             type="number"
-            step="0.01" // bu qadamni aniqlaydi: 0.01 -> onliklar qo‘llab-quvvatlanadi
+            step="0.01"
             {...register("quantity")}
             placeholder="Mahsulot soni"
           />
-
           <button
             style={{
               background: "#000",

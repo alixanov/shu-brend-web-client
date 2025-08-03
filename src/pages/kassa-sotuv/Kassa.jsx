@@ -38,7 +38,6 @@ import Xarajatlar from "../Xarajatlar/Xarajatlar";
 import { useReactToPrint } from "react-to-print";
 import moment from "moment-timezone";
 import Vazvrat from "../vazvrat/Vazvrat";
-import logo from "../../assets/logo.png";
 import { debounce } from "lodash";
 import SotuvTarix from "../sotuv-tarix/Sotuv_tarix";
 import {
@@ -54,13 +53,10 @@ import {
   useGetMastersQuery,
 } from "../../context/service/master.service";
 import MastersModal from "../../components/masters/MastersModal";
-import tg from "../../assets/in.png";
-import instagram from "../../assets/qr-code.png";
 const { Option } = Select;
 
 export default function Kassa() {
   const { data: sales = [] } = useGetSalesHistoryQuery();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -81,8 +77,6 @@ export default function Kassa() {
   } = useGetAllProductsQuery();
   const { data: storeProducts, refetch: storeRefetch } =
     useGetStoreProductsQuery();
-  console.log(products);
-
   const { data: usdRateData } = useGetUsdRateQuery();
   const [updateProduct] = useUpdateProductMutation();
   const [recordSale] = useRecordSaleMutation();
@@ -115,7 +109,28 @@ export default function Kassa() {
   const handlePrint = useReactToPrint({
     content: () => receiptRef.current,
     documentTitle: "new document",
-    pageStyle: "style",
+    pageStyle: `
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 2mm;
+        width: 80mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        box-sizing: border-box;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        overflow: hidden;
+        contain: strict;
+      }
+    `,
     onAfterPrint: () => {
       setChekModal(false);
       setSelectedProducts([]);
@@ -125,7 +140,6 @@ export default function Kassa() {
   const usdRate = usdRateData?.rate || 1;
 
   const productSalesMap = {};
-
   sales?.forEach((sale) => {
     const productId = sale.product_id?._id;
     if (productId) {
@@ -157,12 +171,10 @@ export default function Kassa() {
         const hasStoreStock = (storeProduct?.quantity || 0) > 0;
         return matchesSearch && hasStoreStock;
       })
-      // Qo‘shimcha: har bir mahsulotga sotilgan miqdorni biriktiramiz
       .map((product) => ({
         ...product,
         soldQuantity: productSalesMap[product._id] || 0,
       }))
-      // Sotilgan miqdor bo‘yicha kamayish tartibida saralash
       .sort((a, b) => b.soldQuantity - a.soldQuantity) || [];
 
   const handleSelectProduct = (product) => {
@@ -187,10 +199,10 @@ export default function Kassa() {
             product.currency === currency
               ? product.sell_price
               : product.currency === "usd" && currency === "sum"
-              ? product.sell_price * usdRate
-              : product.currency === "sum" && currency === "usd"
-              ? product.sell_price / usdRate
-              : product.sell_price,
+                ? product.sell_price * usdRate
+                : product.currency === "sum" && currency === "usd"
+                  ? product.sell_price / usdRate
+                  : product.sell_price,
           currency,
         },
       ]);
@@ -231,15 +243,15 @@ export default function Kassa() {
         prev.map((item) =>
           item._id === productId
             ? {
-                ...item,
-                quantity:
-                  newQuantity >=
+              ...item,
+              quantity:
+                newQuantity >=
                   (["litr", "sm"].includes(item.count_type) ? 0.1 : 1)
-                    ? newQuantity
-                    : ["litr", "sm"].includes(item.count_type)
+                  ? newQuantity
+                  : ["litr", "sm"].includes(item.count_type)
                     ? 0.1
                     : 1,
-              }
+            }
             : item
         )
       );
@@ -269,6 +281,10 @@ export default function Kassa() {
   };
 
   const showModal = () => {
+    if (selectedProducts.length === 0) {
+      message.warning("Iltimos, avval mahsulot tanlang!");
+      return;
+    }
     setIsModalVisible(true);
   };
 
@@ -277,7 +293,6 @@ export default function Kassa() {
   };
 
   const handleSellProducts = async () => {
-    setChekModal(true);
     try {
       const debtorProducts = [];
       let masterId = selectedMasterId;
@@ -308,18 +323,18 @@ export default function Kassa() {
           product.currency === currency
             ? product.sell_price
             : product.currency === "usd" && currency === "sum"
-            ? product.sell_price * usdRate
-            : product.currency === "sum" && currency === "usd"
-            ? product.sell_price / usdRate
-            : product.sell_price;
+              ? product.sell_price * usdRate
+              : product.currency === "sum" && currency === "usd"
+                ? product.sell_price / usdRate
+                : product.sell_price;
         const buyPrice =
           product.currency === currency
             ? product.purchase_price
             : product.currency === "usd" && currency === "sum"
-            ? product.purchase_price * usdRate
-            : product.currency === "sum" && currency === "usd"
-            ? product.purchase_price / usdRate
-            : product.purchase_price;
+              ? product.purchase_price * usdRate
+              : product.currency === "sum" && currency === "usd"
+                ? product.purchase_price / usdRate
+                : product.purchase_price;
         if (location === "skalad") {
           if (product.stock < product.quantity) {
             return message.error(
@@ -345,8 +360,6 @@ export default function Kassa() {
             quantity: product.quantity,
           }).unwrap();
         }
-
-        console.log(location);
 
         const commonSaleData = {
           product_id: product._id,
@@ -434,6 +447,7 @@ export default function Kassa() {
       productRefetch();
       message.success("Mahsulotlar muvaffaqiyatli sotildi!");
       setIsModalVisible(false);
+      setChekModal(true); // Open check modal after successful sale
     } catch (error) {
       console.error("Xatolik:", error);
       message.error(
@@ -467,11 +481,7 @@ export default function Kassa() {
           setChekModal(false);
           setSelectedProducts([]);
         }}
-        footer={[
-          <Button type="primary" onClick={handlePrint}>
-            Chop etish
-          </Button>,
-        ]}
+        footer={[]}
         title="To'lov cheki"
       >
         <div
@@ -489,58 +499,54 @@ export default function Kassa() {
         >
           <h1
             style={{
-              fontSize: "20px",
-              display: "flex",
-              width: "100%",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "20px",
+              fontSize: "24px",
               fontWeight: "bold",
+              margin: "0",
+              textAlign: "center",
             }}
           >
-            <img src={logo} alt="" width={150} />
+            Shu Brend
           </h1>
-          <div className="chek_item"></div>
-          <p
-            id="tgqr_p"
-            style={{ display: "flex", justifyContent: "space-around" }}
-          >
-            <img id="tgqr" src={instagram} alt="" />
-            <img id="tgqr" src={tg} alt="" />
-          </p>
           <div className="chek_item">
             <b>
-              Сана:{" "}
+              Sana:{" "}
               <b>{moment().tz("Asia/Tashkent").format("DD.MM.YYYY HH:mm")}</b>
             </b>
           </div>
-          <table className="table">
+          <table
+            className="table"
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "12px",
+            }}
+          >
             <thead>
               <tr>
-                <td>№</td>
-                <td>Товар</td>
-                <td>Улчов</td>
-                <td>Сони</td>
-                <td>Сумма</td>
+                <th>№</th>
+                <th>Tovar</th>
+                <th>Ulchov</th>
+                <th>Soni</th>
+                <th>Summa</th>
               </tr>
             </thead>
             <tbody>
               {selectedProducts?.map((item, index) => (
                 <tr key={item._id}>
-                  <td style={{ paddingBlock: "20px" }}>{index + 1}</td>
-                  <td style={{ paddingBlock: "20px" }}>{item.product_name}</td>
-                  <td style={{ paddingBlock: "20px" }}>{item.count_type}</td>
-                  <td style={{ paddingBlock: "20px" }}>{item.quantity}</td>
-                  <td style={{ paddingBlock: "20px" }}>
+                  <td style={{ paddingBlock: "10px" }}>{index + 1}</td>
+                  <td style={{ paddingBlock: "10px" }}>{item.product_name}</td>
+                  <td style={{ paddingBlock: "10px" }}>{item.count_type}</td>
+                  <td style={{ paddingBlock: "10px" }}>{item.quantity}</td>
+                  <td style={{ paddingBlock: "10px" }}>
                     {(
                       item.quantity *
                       (item.currency === currency
                         ? item.sell_price
                         : item.currency === "usd" && currency === "sum"
-                        ? item.sell_price * usdRate
-                        : item.currency === "sum" && currency === "usd"
-                        ? item.sell_price / usdRate
-                        : item.sell_price)
+                          ? item.sell_price * usdRate
+                          : item.currency === "sum" && currency === "usd"
+                            ? item.sell_price / usdRate
+                            : item.sell_price)
                     ).toLocaleString()}
                   </td>
                 </tr>
@@ -548,22 +554,23 @@ export default function Kassa() {
               <tr>
                 <td colSpan={4} style={{ border: "none" }}></td>
                 <td>
-                  <h1>Жами:</h1>
+                  <h3 style={{ margin: "5px 0" }}>Jami:</h3>
                   {Number(totalAmount.toFixed(2)).toLocaleString()}
                 </td>
               </tr>
             </tbody>
-            <p
-              style={{
-                fontSize: "13px",
-                textAlign: "center",
-                fontWeight: "bold",
-              }}
-            >
-              <span>+998 91 294 87 80</span> <br />
-              <span>+998 90 790 42 32</span> <br />
-            </p>
           </table>
+          <p
+            style={{
+              fontSize: "12px",
+              textAlign: "center",
+              fontWeight: "bold",
+              margin: "5px 0",
+            }}
+          >
+            <span>+998 94 138 33 33</span> <br />
+            <span>+998 88 926 04 04</span>
+          </p>
         </div>
       </Modal>
 
@@ -1072,9 +1079,11 @@ export default function Kassa() {
         )}
         <Modal
           title="To'lov usulini tanlang"
-          visible={isModalVisible}
+          open={isModalVisible}
           onOk={handleSellProducts}
           onCancel={handleCancel}
+          okText="Sotish"
+          cancelText="Bekor qilish"
         >
           <Form layout="vertical">
             <Form.Item label="To'lov usuli">
@@ -1216,9 +1225,6 @@ export default function Kassa() {
                 )}
               </>
             )}
-            <Form.Item label="Joylashuv">
-              <Input value="Dokon" disabled />
-            </Form.Item>
           </Form>
         </Modal>
       </Card>
