@@ -1,8 +1,8 @@
 import React, { memo, useState } from "react";
 import "./login.css";
-import { json, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import bg from "../../assets/bglogin.jpg"
+import bg from "../../assets/bglogin.jpg";
 
 export const Login = memo(() => {
   const navigate = useNavigate();
@@ -39,14 +39,13 @@ export const Login = memo(() => {
   };
 
   return (
-    <div className="login">
+    <div className="login" style={{ backgroundImage: `url(${bg})` }}>
       <div className="login-container">
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-header">
             <h2>Hush kelibsiz</h2>
             <p>Hisobingizga kiring</p>
           </div>
-
           <label>
             <input
               type="text"
@@ -56,7 +55,6 @@ export const Login = memo(() => {
               disabled={isLoading}
             />
           </label>
-
           <label>
             <input
               type="password"
@@ -65,7 +63,6 @@ export const Login = memo(() => {
               disabled={isLoading}
             />
           </label>
-
           <label>
             <input
               type="submit"
